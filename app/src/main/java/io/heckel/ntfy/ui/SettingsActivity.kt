@@ -344,6 +344,27 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 }
             }
 
+            // Optional Headers
+            val defaultOptionalHeadersPrefId = context?.getString(R.string.settings_general_default_optional_headers_key) ?: return
+            val defaultOptionalHeaders: EditTextPreference? = findPreference(defaultOptionalHeadersPrefId)
+            defaultOptionalHeaders?.text = repository.getDefaultOptionalHeaders() ?: ""
+            defaultOptionalHeaders?.preferenceDataStore = object : PreferenceDataStore() {
+                override fun putString(key: String, value: String?) {
+                    val optionalHeaders = value ?: return
+                    repository.setDefaultOptionalHeaders(optionalHeaders)
+                }
+                override fun getString(key: String, defValue: String?): String? {
+                    return repository.getDefaultOptionalHeaders()
+                }
+            }
+            defaultOptionalHeaders?.summaryProvider = Preference.SummaryProvider<EditTextPreference> { pref ->
+                if (TextUtils.isEmpty(pref.text)) {
+                    getString(R.string.settings_general_default_optional_headers_summary)
+                } else {
+                    pref.text
+                }
+            }
+
             // Broadcast enabled
             val broadcastEnabledPrefId = context?.getString(R.string.settings_advanced_broadcast_key) ?: return
             val broadcastEnabled: SwitchPreference? = findPreference(broadcastEnabledPrefId)

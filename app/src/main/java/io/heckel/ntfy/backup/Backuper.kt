@@ -13,6 +13,7 @@ import io.heckel.ntfy.msg.NotificationService
 import io.heckel.ntfy.util.Log
 import io.heckel.ntfy.util.topicUrl
 import java.io.InputStreamReader
+import java.util.*
 
 class Backuper(val context: Context) {
     private val gson = Gson()
@@ -80,6 +81,9 @@ class Backuper(val context: Context) {
         if (settings.defaultBaseUrl != null) {
             repository.setDefaultBaseUrl(settings.defaultBaseUrl)
         }
+        if (settings.defaultOptionalHeaders != null) {
+            repository.setDefaultOptionalHeaders(settings.defaultOptionalHeaders)
+        }
         if (settings.mutedUntil != null) {
             repository.setGlobalMutedUntil(settings.mutedUntil)
         }
@@ -99,6 +103,7 @@ class Backuper(val context: Context) {
                 val subscription = io.heckel.ntfy.db.Subscription(
                     id = s.id,
                     baseUrl = s.baseUrl,
+                    optionalHeaders = s.optionalHeaders,
                     topic = s.topic,
                     instant = s.instant,
                     dedicatedChannels = s.dedicatedChannels,
@@ -237,6 +242,7 @@ class Backuper(val context: Context) {
             broadcastEnabled = repository.getBroadcastEnabled(),
             recordLogs = repository.getRecordLogs(),
             defaultBaseUrl = repository.getDefaultBaseUrl() ?: "",
+            defaultOptionalHeaders = repository.getDefaultOptionalHeaders() ?: "",
             mutedUntil = repository.getGlobalMutedUntil(),
             lastSharedTopics = repository.getLastShareTopics()
         )
@@ -247,6 +253,7 @@ class Backuper(val context: Context) {
             Subscription(
                 id = s.id,
                 baseUrl = s.baseUrl,
+                optionalHeaders = s.optionalHeaders,
                 topic = s.topic,
                 instant = s.instant,
                 dedicatedChannels = s.dedicatedChannels,
@@ -359,6 +366,7 @@ data class Settings(
     val broadcastEnabled: Boolean?,
     val recordLogs: Boolean?,
     val defaultBaseUrl: String?,
+    val defaultOptionalHeaders: String?,
     val mutedUntil: Long?,
     val lastSharedTopics: List<String>?,
 )
@@ -366,6 +374,7 @@ data class Settings(
 data class Subscription(
     val id: Long,
     val baseUrl: String,
+    val optionalHeaders: String,
     val topic: String,
     val instant: Boolean,
     val dedicatedChannels: Boolean,

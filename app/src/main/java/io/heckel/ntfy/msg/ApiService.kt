@@ -33,6 +33,7 @@ class ApiService {
 
     fun publish(
         baseUrl: String,
+        optionalHeaders: String,
         topic: String,
         user: User? = null,
         message: String,
@@ -68,7 +69,7 @@ class ApiService {
         } else {
             url
         }
-        val request = requestBuilder(urlWithQuery, user)
+        val request = requestBuilder(urlWithQuery, optionalHeaders, user)
             .put(body ?: message.toRequestBody())
             .build()
         Log.d(TAG, "Publishing to $request")
@@ -84,12 +85,12 @@ class ApiService {
         }
     }
 
-    fun poll(subscriptionId: Long, baseUrl: String, topic: String, user: User?, since: String? = null): List<Notification> {
+    fun poll(subscriptionId: Long, baseUrl: String, optionalHeaders: String, topic: String, user: User?, since: String? = null): List<Notification> {
         val sinceVal = since ?: "all"
         val url = topicUrlJsonPoll(baseUrl, topic, sinceVal)
         Log.d(TAG, "Polling topic $url")
 
-        val request = requestBuilder(url, user).build()
+        val request = requestBuilder(url, optionalHeaders, user).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw Exception("Unexpected response ${response.code} when polling topic $url")
@@ -107,6 +108,7 @@ class ApiService {
 
     fun subscribe(
         baseUrl: String,
+        optionalHeaders: String,
         topics: String,
         unifiedPushTopics: String,
         since: String?,
@@ -117,7 +119,7 @@ class ApiService {
         val sinceVal = since ?: "all"
         val url = topicUrlJson(baseUrl, topics, sinceVal)
         Log.d(TAG, "Opening subscription connection to $url")
-        val request = requestBuilder(url, user, unifiedPushTopics).build()
+        val request = requestBuilder(url, optionalHeaders, user, unifiedPushTopics).build()
         val call = subscriberClient.newCall(request)
         call.enqueue(object : Callback {
             override fun onResponse(call: Call, response: Response) {
@@ -146,14 +148,14 @@ class ApiService {
         return call
     }
 
-    fun checkAuth(baseUrl: String, topic: String, user: User?): Boolean {
+    fun checkAuth(baseUrl: String, optionalHeaders: String, topic: String, user: User?): Boolean {
         if (user == null) {
             Log.d(TAG, "Checking anonymous read against ${topicUrl(baseUrl, topic)}")
         } else {
             Log.d(TAG, "Checking read access for user ${user.username} against ${topicUrl(baseUrl, topic)}")
         }
         val url = topicUrlAuth(baseUrl, topic)
-        val request = requestBuilder(url, user).build()
+        val request = requestBuilder(url, optionalHeaders, user).build()
         client.newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 return true
@@ -179,10 +181,17 @@ class ApiService {
         const val EVENT_KEEPALIVE = "keepalive"
         const val EVENT_POLL_REQUEST = "poll_request"
 
-        fun requestBuilder(url: String, user: User?, unifiedPushTopics: String? = null): Request.Builder {
+        fun requestBuilder(url: String, optionalHeaders: String, user: User?, unifiedPushTopics: String? = null): Request.Builder {
             val builder = Request.Builder()
                 .url(url)
                 .addHeader("User-Agent", USER_AGENT)
+
+            if (optionalHeaders.isNotBlank() && !url.matches(Regex("https?://ntfy.sh"))) {
+                parseHeaders(optionalHeaders).forEach { (key, value) ->
+                    builder.addHeader(key, value)
+                }
+            }
+
             if (user != null) {
                 builder.addHeader("Authorization", Credentials.basic(user.username, user.password, UTF_8))
             }

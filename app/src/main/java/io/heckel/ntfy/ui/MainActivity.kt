@@ -441,13 +441,14 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         newFragment.show(supportFragmentManager, AddFragment.TAG)
     }
 
-    override fun onSubscribe(topic: String, baseUrl: String, instant: Boolean) {
+    override fun onSubscribe(topic: String, baseUrl: String, optionalHeaders: String, instant: Boolean) {
         Log.d(TAG, "Adding subscription ${topicShortUrl(baseUrl, topic)} (instant = $instant)")
 
         // Add subscription to database
         val subscription = Subscription(
             id = randomSubscriptionId(),
             baseUrl = baseUrl,
+            optionalHeaders = optionalHeaders,
             topic = topic,
             instant = instant,
             dedicatedChannels = false,
@@ -476,7 +477,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val user = repository.getUser(subscription.baseUrl) // May be null
-                val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.topic, user)
+                val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.optionalHeaders, subscription.topic, user)
                 notifications.forEach { notification ->
                     repository.addNotification(notification)
                     if (notification.icon != null) {
@@ -518,7 +519,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
                 Log.d(TAG, "subscription: ${subscription}")
                 try {
                     val user = repository.getUser(subscription.baseUrl) // May be null
-                    val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.topic, user, subscription.lastNotificationId)
+                    val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.optionalHeaders, subscription.topic, user, subscription.lastNotificationId)
                     val newNotifications = repository.onlyNewNotifications(subscription.id, notifications)
                     newNotifications.forEach { notification ->
                         newNotificationsCount++
@@ -554,6 +555,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         val intent = Intent(this, DetailActivity::class.java)
         intent.putExtra(EXTRA_SUBSCRIPTION_ID, subscription.id)
         intent.putExtra(EXTRA_SUBSCRIPTION_BASE_URL, subscription.baseUrl)
+        intent.putExtra(EXTRA_SUBSCRIPTION_OPTIONAL_HEADERS, subscription.optionalHeaders);
         intent.putExtra(EXTRA_SUBSCRIPTION_TOPIC, subscription.topic)
         intent.putExtra(EXTRA_SUBSCRIPTION_DISPLAY_NAME, displayName(subscription))
         intent.putExtra(EXTRA_SUBSCRIPTION_INSTANT, subscription.instant)
@@ -567,6 +569,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         val intent = Intent(this, DetailSettingsActivity::class.java)
         intent.putExtra(DetailActivity.EXTRA_SUBSCRIPTION_ID, subscription.id)
         intent.putExtra(DetailActivity.EXTRA_SUBSCRIPTION_BASE_URL, subscription.baseUrl)
+        intent.putExtra(DetailActivity.EXTRA_SUBSCRIPTION_OPTIONAL_HEADERS, subscription.optionalHeaders);
         intent.putExtra(DetailActivity.EXTRA_SUBSCRIPTION_TOPIC, subscription.topic)
         intent.putExtra(DetailActivity.EXTRA_SUBSCRIPTION_DISPLAY_NAME, displayName(subscription))
         startActivity(intent)
@@ -693,6 +696,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         const val TAG = "NtfyMainActivity"
         const val EXTRA_SUBSCRIPTION_ID = "subscriptionId"
         const val EXTRA_SUBSCRIPTION_BASE_URL = "subscriptionBaseUrl"
+        const val EXTRA_SUBSCRIPTION_OPTIONAL_HEADERS = "optionalHeaders";
         const val EXTRA_SUBSCRIPTION_TOPIC = "subscriptionTopic"
         const val EXTRA_SUBSCRIPTION_DISPLAY_NAME = "subscriptionDisplayName"
         const val EXTRA_SUBSCRIPTION_INSTANT = "subscriptionInstant"

@@ -39,6 +39,8 @@ class AddFragment : DialogFragment() {
     private lateinit var subscribeTopicText: TextInputEditText
     private lateinit var subscribeBaseUrlLayout: TextInputLayout
     private lateinit var subscribeBaseUrlText: AutoCompleteTextView
+    private lateinit var subscribeOptionalHeaderLayout: TextInputLayout
+    private lateinit var subscribeOptionalHeaderText: AutoCompleteTextView
     private lateinit var subscribeUseAnotherServerCheckbox: CheckBox
     private lateinit var subscribeUseAnotherServerDescription: TextView
     private lateinit var subscribeInstantDeliveryBox: View
@@ -57,7 +59,7 @@ class AddFragment : DialogFragment() {
     private lateinit var loginErrorTextImage: View
 
     interface SubscribeListener {
-        fun onSubscribe(topic: String, baseUrl: String, instant: Boolean)
+        fun onSubscribe(topic: String, baseUrl: String, optionalHeaders: String, instant: Boolean)
     }
 
     override fun onAttach(context: Context) {
@@ -92,6 +94,14 @@ class AddFragment : DialogFragment() {
         subscribeBaseUrlText = view.findViewById(R.id.add_dialog_subscribe_base_url_text)
         subscribeBaseUrlText.background = view.background
         subscribeBaseUrlText.hint = defaultBaseUrl ?: appBaseUrl
+
+        subscribeOptionalHeaderLayout = view.findViewById(R.id.add_dialog_subscribe_optional_headers_layout)
+        subscribeOptionalHeaderLayout.background = view.background
+        subscribeOptionalHeaderLayout.makeEndIconSmaller(resources)
+        subscribeOptionalHeaderText = view.findViewById(R.id.add_dialog_subscribe_optional_headers_text)
+        subscribeOptionalHeaderText.background = view.background
+        subscribeOptionalHeaderText.hint = "Header:value, Header2:value2"
+
         subscribeInstantDeliveryBox = view.findViewById(R.id.add_dialog_subscribe_instant_delivery_box)
         subscribeInstantDeliveryCheckbox = view.findViewById(R.id.add_dialog_subscribe_instant_delivery_checkbox)
         subscribeInstantDeliveryDescription = view.findViewById(R.id.add_dialog_subscribe_instant_delivery_description)
@@ -173,6 +183,7 @@ class AddFragment : DialogFragment() {
             }
             subscribeTopicText.addTextChangedListener(subscribeTextWatcher)
             subscribeBaseUrlText.addTextChangedListener(subscribeTextWatcher)
+            subscribeOptionalHeaderText.addTextChangedListener(subscribeTextWatcher)
             subscribeInstantDeliveryCheckbox.setOnCheckedChangeListener { _, _ ->
                 validateInputSubscribeView()
             }
@@ -191,14 +202,16 @@ class AddFragment : DialogFragment() {
     private fun positiveButtonClick() {
         val topic = subscribeTopicText.text.toString()
         val baseUrl = getBaseUrl()
+        val optionalHeaders = getOptionalHeaders()
+
         if (subscribeView.visibility == View.VISIBLE) {
-            checkReadAndMaybeShowLogin(baseUrl, topic)
+            checkReadAndMaybeShowLogin(baseUrl, optionalHeaders, topic)
         } else if (loginView.visibility == View.VISIBLE) {
-            loginAndMaybeDismiss(baseUrl, topic)
+            loginAndMaybeDismiss(baseUrl, optionalHeaders, topic)
         }
     }
 
-    private fun checkReadAndMaybeShowLogin(baseUrl: String, topic: String) {
+    private fun checkReadAndMaybeShowLogin(baseUrl: String, optionalHeaders: String, topic: String) {
         subscribeProgress.visibility = View.VISIBLE
         subscribeErrorText.visibility = View.GONE
         subscribeErrorTextImage.visibility = View.GONE
@@ -206,7 +219,7 @@ class AddFragment : DialogFragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val user = repository.getUser(baseUrl) // May be null
-                val authorized = api.checkAuth(baseUrl, topic, user)
+                val authorized = api.checkAuth(baseUrl, optionalHeaders, topic, user)
                 if (authorized) {
                     Log.d(TAG, "Access granted to topic ${topicUrl(baseUrl, topic)}")
                     dismissDialog()
@@ -240,7 +253,7 @@ class AddFragment : DialogFragment() {
         }
     }
 
-    private fun loginAndMaybeDismiss(baseUrl: String, topic: String) {
+    private fun loginAndMaybeDismiss(baseUrl: String, optionalHeaders: String, topic: String) {
         loginProgress.visibility = View.VISIBLE
         loginErrorText.visibility = View.GONE
         loginErrorTextImage.visibility = View.GONE
@@ -253,7 +266,7 @@ class AddFragment : DialogFragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             Log.d(TAG, "Checking read access for user ${user.username} to topic ${topicUrl(baseUrl, topic)}")
             try {
-                val authorized = api.checkAuth(baseUrl, topic, user)
+                val authorized = api.checkAuth(baseUrl, optionalHeaders, topic, user)
                 if (authorized) {
                     Log.d(TAG, "Access granted for user ${user.username} to topic ${topicUrl(baseUrl, topic)}, adding to database")
                     repository.addUser(user)
@@ -304,9 +317,12 @@ class AddFragment : DialogFragment() {
         if (subscribeUseAnotherServerCheckbox.isChecked) {
             subscribeUseAnotherServerDescription.visibility = View.VISIBLE
             subscribeBaseUrlLayout.visibility = View.VISIBLE
+            subscribeOptionalHeaderLayout.visibility = View.VISIBLE
+
         } else {
             subscribeUseAnotherServerDescription.visibility = View.GONE
             subscribeBaseUrlLayout.visibility = View.GONE
+            subscribeOptionalHeaderLayout.visibility = View.GONE
         }
         if (instantToggleAllowed) {
             subscribeInstantDeliveryBox.visibility = View.VISIBLE
@@ -356,8 +372,9 @@ class AddFragment : DialogFragment() {
         activity.runOnUiThread {
             val topic = subscribeTopicText.text.toString()
             val baseUrl = getBaseUrl()
+            val optionalHeaders = getOptionalHeaders();
             val instant = !BuildConfig.FIREBASE_AVAILABLE || baseUrl != appBaseUrl || subscribeInstantDeliveryCheckbox.isChecked
-            subscribeListener.onSubscribe(topic, baseUrl, instant)
+            subscribeListener.onSubscribe(topic, baseUrl, optionalHeaders, instant)
             dialog?.dismiss()
         }
     }
@@ -367,6 +384,14 @@ class AddFragment : DialogFragment() {
             subscribeBaseUrlText.text.toString()
         } else {
             return defaultBaseUrl ?: appBaseUrl
+        }
+    }
+
+    private fun getOptionalHeaders(): String {
+        return if (subscribeUseAnotherServerCheckbox.isChecked) {
+            subscribeOptionalHeaderText.text.toString()
+        } else {
+            return repository.getDefaultOptionalHeaders() ?: ""
         }
     }
 
@@ -398,6 +423,7 @@ class AddFragment : DialogFragment() {
     private fun enableSubscribeView(enable: Boolean) {
         subscribeTopicText.isEnabled = enable
         subscribeBaseUrlText.isEnabled = enable
+        subscribeOptionalHeaderText.isEnabled = enable
         subscribeInstantDeliveryCheckbox.isEnabled = enable
         subscribeUseAnotherServerCheckbox.isEnabled = enable
         positiveButton.isEnabled = enable

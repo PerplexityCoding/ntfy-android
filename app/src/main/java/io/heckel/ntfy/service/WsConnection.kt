@@ -55,6 +55,7 @@ class WsConnection(
 
     private val since = AtomicReference<String?>(sinceId)
     private val baseUrl = connectionId.baseUrl
+    private val optionalHeaders = connectionId.optionalHeaders
     private val topicsToSubscriptionIds = connectionId.topicsToSubscriptionIds
     private val topicIsUnifiedPush = connectionId.topicIsUnifiedPush
     private val subscriptionIds = topicsToSubscriptionIds.values
@@ -80,7 +81,7 @@ class WsConnection(
         val sinceId = since.get()
         val sinceVal = sinceId ?: "all"
         val urlWithSince = topicUrlWs(baseUrl, topicsStr, sinceVal)
-        val request = requestBuilder(urlWithSince, user, unifiedPushTopicsStr).build()
+        val request = requestBuilder(urlWithSince, optionalHeaders, user, unifiedPushTopicsStr).build()
         Log.d(TAG, "$shortUrl (gid=$globalId): Opening $urlWithSince with listener ID $nextListenerId ...")
         webSocket = client.newWebSocket(request, Listener(nextListenerId))
     }

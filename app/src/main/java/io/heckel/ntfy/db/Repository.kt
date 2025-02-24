@@ -347,6 +347,10 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
             sharedPrefs.getString(SHARED_PREFS_UNIFIED_PUSH_BASE_URL, null) // Fall back to UP URL, removed when default is set!
     }
 
+    fun getDefaultOptionalHeaders(): String? {
+        return sharedPrefs.getString(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS, null)
+    }
+
     fun setDefaultBaseUrl(baseUrl: String) {
         if (baseUrl == "") {
             sharedPrefs
@@ -358,6 +362,19 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
             sharedPrefs.edit()
                 .remove(SHARED_PREFS_UNIFIED_PUSH_BASE_URL) // Remove legacy key
                 .putString(SHARED_PREFS_DEFAULT_BASE_URL, baseUrl)
+                .apply()
+        }
+    }
+
+    fun setDefaultOptionalHeaders(optionalHeaders: String?) {
+        if (optionalHeaders == "") {
+            sharedPrefs
+                .edit()
+                .remove(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS) // Remove legacy key
+                .apply()
+        } else {
+            sharedPrefs.edit()
+                .putString(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS, optionalHeaders)
                 .apply()
         }
     }
@@ -407,6 +424,7 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
             Subscription(
                 id = s.id,
                 baseUrl = s.baseUrl,
+                optionalHeaders = s.optionalHeaders,
                 topic = s.topic,
                 instant = s.instant,
                 dedicatedChannels = s.dedicatedChannels,
@@ -434,6 +452,7 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
         return Subscription(
             id = s.id,
             baseUrl = s.baseUrl,
+            optionalHeaders = s.optionalHeaders,
             topic = s.topic,
             instant = s.instant,
             dedicatedChannels = s.dedicatedChannels,
@@ -494,6 +513,7 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
         const val SHARED_PREFS_WEBSOCKET_REMIND_TIME = "JsonStreamRemindTime" // "Use WebSocket" banner (used to be JSON stream deprecation banner)
         const val SHARED_PREFS_UNIFIED_PUSH_BASE_URL = "UnifiedPushBaseURL" // Legacy key required for migration to DefaultBaseURL
         const val SHARED_PREFS_DEFAULT_BASE_URL = "DefaultBaseURL"
+        const val SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS = "DefaultOptionalHeaders"
         const val SHARED_PREFS_LAST_TOPICS = "LastTopics"
 
         private const val LAST_TOPICS_COUNT = 3

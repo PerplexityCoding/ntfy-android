@@ -43,6 +43,7 @@ class PollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
                     val notifications = api.poll(
                         subscriptionId = subscription.id,
                         baseUrl = subscription.baseUrl,
+                        optionalHeaders = subscription.optionalHeaders,
                         topic = subscription.topic,
                         user = user,
                         since = subscription.lastNotificationId

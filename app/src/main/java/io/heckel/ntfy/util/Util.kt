@@ -509,3 +509,10 @@ fun Long.nullIfZero(): Long? {
     return if (this == 0L) return null else this
 }
 
+fun parseHeaders(headersString: String): List<Pair<String, String>> {
+    return headersString.split(Regex(",\\s*")) // Split by ", " or ","
+        .mapNotNull {
+            val parts = it.split(":", limit = 2).map(String::trim)
+            if (parts.size == 2) parts[0] to parts[1] else null
+        }
+}

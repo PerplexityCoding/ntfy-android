@@ -68,11 +68,14 @@ class BroadcastReceiver : android.content.BroadcastReceiver() {
 
                 // Add subscription
                 val baseUrl = repository.getDefaultBaseUrl() ?: context.getString(R.string.app_base_url)
+                val optionalHeaders = repository.getDefaultOptionalHeaders() ?: "";
+
                 val topic = UP_PREFIX + randomString(TOPIC_RANDOM_ID_LENGTH)
                 val endpoint = topicUrlUp(baseUrl, topic)
                 val subscription = Subscription(
                     id = randomSubscriptionId(),
                     baseUrl = baseUrl,
+                    optionalHeaders = optionalHeaders,
                     topic = topic,
                     instant = true, // No Firebase, always instant!
                     dedicatedChannels = false,

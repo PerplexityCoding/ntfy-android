@@ -258,6 +258,7 @@ class ShareActivity : AppCompatActivity() {
 
     private fun onShareClick() {
         val baseUrl = getBaseUrl()
+        val optionalHeaders = getOptionalHeaders();
         val topic = topicText.text.toString()
         val message = contentText.text.toString()
         progress.visibility = View.VISIBLE
@@ -278,6 +279,7 @@ class ShareActivity : AppCompatActivity() {
                 }
                 api.publish(
                     baseUrl = baseUrl,
+                    optionalHeaders = optionalHeaders,
                     topic = topic,
                     user = user,
                     message = message,
@@ -333,6 +335,14 @@ class ShareActivity : AppCompatActivity() {
             baseUrlText.text.toString()
         } else {
             defaultBaseUrl ?: appBaseUrl
+        }
+    }
+
+    private fun getOptionalHeaders(): String {
+        return if (useAnotherServerCheckbox.isChecked) {
+            "" // FIXME
+        } else {
+            return repository.getDefaultBaseUrl() ?: ""
         }
     }
 

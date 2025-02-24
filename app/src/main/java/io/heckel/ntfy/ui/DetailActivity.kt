@@ -54,6 +54,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
     // Which subscription are we looking at
     private var subscriptionId: Long = 0L // Set in onCreate()
     private var subscriptionBaseUrl: String = "" // Set in onCreate()
+    private var subscriptionOptionalHeaders: String = "";
     private var subscriptionTopic: String = "" // Set in onCreate()
     private var subscriptionDisplayName: String = "" // Set in onCreate() & updated by options menu!
     private var subscriptionInstant: Boolean = false // Set in onCreate() & updated by options menu!
@@ -109,6 +110,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
                 subscription = Subscription(
                     id = randomSubscriptionId(),
                     baseUrl = baseUrl,
+                    optionalHeaders = "",
                     topic = topic,
                     instant = instant,
                     dedicatedChannels = false,
@@ -136,7 +138,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
                 // Fetch cached messages
                 try {
                     val user = repository.getUser(subscription.baseUrl) // May be null
-                    val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.topic, user)
+                    val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.optionalHeaders, subscription.topic, user)
                     notifications.forEach { notification -> repository.addNotification(notification) }
                 } catch (e: Exception) {
                     Log.e(TAG, "Unable to fetch notifications: ${e.message}", e)
@@ -166,6 +168,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
         // Get extras required for the return to the main activity
         subscriptionId = intent.getLongExtra(MainActivity.EXTRA_SUBSCRIPTION_ID, 0)
         subscriptionBaseUrl = intent.getStringExtra(MainActivity.EXTRA_SUBSCRIPTION_BASE_URL) ?: return
+        subscriptionOptionalHeaders = intent.getStringExtra(MainActivity.EXTRA_SUBSCRIPTION_OPTIONAL_HEADERS) ?: ""
         subscriptionTopic = intent.getStringExtra(MainActivity.EXTRA_SUBSCRIPTION_TOPIC) ?: return
         subscriptionDisplayName = intent.getStringExtra(MainActivity.EXTRA_SUBSCRIPTION_DISPLAY_NAME) ?: return
         subscriptionInstant = intent.getBooleanExtra(MainActivity.EXTRA_SUBSCRIPTION_INSTANT, false)
@@ -403,7 +406,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
                 val tags = possibleTags.shuffled().take(Random.nextInt(0, 4))
                 val title = if (Random.nextBoolean()) getString(R.string.detail_test_title) else ""
                 val message = getString(R.string.detail_test_message, priority)
-                api.publish(subscriptionBaseUrl, subscriptionTopic, user, message, title, priority, tags, delay = "")
+                api.publish(subscriptionBaseUrl, subscriptionOptionalHeaders, subscriptionTopic, user, message, title, priority, tags, delay = "")
             } catch (e: Exception) {
                 runOnUiThread {
                     val message = if (e is ApiService.UnauthorizedException) {
@@ -476,7 +479,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
             try {
                 val subscription = repository.getSubscription(subscriptionId) ?: return@launch
                 val user = repository.getUser(subscription.baseUrl) // May be null
-                val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.topic, user, subscription.lastNotificationId)
+                val notifications = api.poll(subscription.id, subscription.baseUrl, subscription.optionalHeaders, subscription.topic, user, subscription.lastNotificationId)
                 val newNotifications = repository.onlyNewNotifications(subscriptionId, notifications)
                 val toastMessage = if (newNotifications.isEmpty()) {
                     getString(R.string.refresh_message_no_results)
@@ -769,6 +772,7 @@ class DetailActivity : AppCompatActivity(), ActionMode.Callback, NotificationFra
         const val TAG = "NtfyDetailActivity"
         const val EXTRA_SUBSCRIPTION_ID = "subscriptionId"
         const val EXTRA_SUBSCRIPTION_BASE_URL = "baseUrl"
+        const val EXTRA_SUBSCRIPTION_OPTIONAL_HEADERS = "optionalHeaders"
         const val EXTRA_SUBSCRIPTION_TOPIC = "topic"
         const val EXTRA_SUBSCRIPTION_DISPLAY_NAME = "displayName"
     }

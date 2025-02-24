@@ -69,6 +69,7 @@ class BroadcastService(private val ctx: Context) {
         private fun send(ctx: Context, intent: Intent) {
             val api = ApiService()
             val baseUrl = getStringExtra(intent, "base_url") ?: ctx.getString(R.string.app_base_url)
+            val optionalHeaders = getStringExtra(intent, "headers") ?: ""
             val topic = getStringExtra(intent, "topic") ?: return
             val message = getStringExtra(intent, "message") ?: return
             val title = getStringExtra(intent, "title") ?: ""
@@ -89,6 +90,7 @@ class BroadcastService(private val ctx: Context) {
                     Log.d(TAG, "Publishing message $intent")
                     api.publish(
                         baseUrl = baseUrl,
+                        optionalHeaders = optionalHeaders,
                         topic = topic,
                         user = user,
                         message = message,
