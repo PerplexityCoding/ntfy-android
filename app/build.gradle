@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId "io.heckel.ntfy"
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 33
 
         versionCode 33
@@ -98,6 +98,7 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:1.5.7"
     implementation "androidx.work:work-runtime-ktx:2.8.1"
     implementation 'androidx.preference:preference-ktx:1.2.0'
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
     // JSON serialization
     implementation 'com.google.code.gson:gson:2.10'

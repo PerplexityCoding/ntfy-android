@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.*
+import io.heckel.ntfy.util.DecryptionHelper
+import io.heckel.ntfy.util.EncryptionHelper
 import io.heckel.ntfy.util.Log
 import io.heckel.ntfy.util.validUrl
 import java.util.concurrent.ConcurrentHashMap
@@ -73,13 +75,17 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
     @Suppress("RedundantSuspendModifier")
     @WorkerThread
     suspend fun addSubscription(subscription: Subscription) {
-        subscriptionDao.add(subscription)
+        val encryptedHeaders = EncryptionHelper.encrypt(subscription.optionalHeaders)
+        val updatedSubscription = subscription.copy(optionalHeaders = encryptedHeaders)
+        subscriptionDao.add(updatedSubscription)
     }
 
     @Suppress("RedundantSuspendModifier")
     @WorkerThread
     suspend fun updateSubscription(subscription: Subscription) {
-        subscriptionDao.update(subscription)
+        val encryptedHeaders = EncryptionHelper.encrypt(subscription.optionalHeaders)
+        val updatedSubscription = subscription.copy(optionalHeaders = encryptedHeaders)
+        subscriptionDao.update(updatedSubscription)
     }
 
     @Suppress("RedundantSuspendModifier")
@@ -162,23 +168,39 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
     }
 
     suspend fun getUsers(): List<User> {
-        return userDao.list()
+        return userDao.list().map { user ->
+            val decryptedPassword = DecryptionHelper.decrypt(user.password)
+            user.copy(password = decryptedPassword)
+        }
     }
 
     fun getUsersLiveData(): LiveData<List<User>> {
-        return userDao.listFlow().asLiveData()
+        return userDao.listFlow().asLiveData().map { users ->
+            users.map { user ->
+                val decryptedPassword = DecryptionHelper.decrypt(user.password)
+                user.copy(password = decryptedPassword)
+            }
+        }
     }
 
     suspend fun addUser(user: User) {
-        userDao.insert(user)
+        val encryptedPassword = EncryptionHelper.encrypt(user.password)
+        val updatedUser = user.copy(password = encryptedPassword)
+        userDao.insert(updatedUser)
     }
 
     suspend fun updateUser(user: User) {
-        userDao.update(user)
+        val encryptedPassword = EncryptionHelper.encrypt(user.password)
+        val updatedUser = user.copy(password = encryptedPassword)
+        userDao.update(updatedUser)
     }
 
     suspend fun getUser(baseUrl: String): User? {
-        return userDao.get(baseUrl)
+        val user = userDao.get(baseUrl)
+        return user?.let {
+            val decryptedPassword = DecryptionHelper.decrypt(it.password)
+            it.copy(password = decryptedPassword)
+        }
     }
 
     suspend fun deleteUser(baseUrl: String) {
@@ -348,7 +370,8 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
     }
 
     fun getDefaultOptionalHeaders(): String? {
-        return sharedPrefs.getString(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS, null)
+        val encryptedHeaders = sharedPrefs.getString(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS, null)
+        return if (encryptedHeaders != null) DecryptionHelper.decrypt(encryptedHeaders) else null
     }
 
     fun setDefaultBaseUrl(baseUrl: String) {
@@ -373,8 +396,9 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
                 .remove(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS) // Remove legacy key
                 .apply()
         } else {
+            val encryptedHeaders = optionalHeaders?.let { EncryptionHelper.encrypt(it) }
             sharedPrefs.edit()
-                .putString(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS, optionalHeaders)
+                .putString(SHARED_PREFS_DEFAULT_OPTIONAL_HEADERS, encryptedHeaders)
                 .apply()
         }
     }
@@ -421,10 +445,11 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
     private fun toSubscriptionList(list: List<SubscriptionWithMetadata>): List<Subscription> {
         return list.map { s ->
             val connectionState = connectionStates.getOrElse(s.id) { ConnectionState.NOT_APPLICABLE }
+            val decryptedHeaders = DecryptionHelper.decrypt(s.optionalHeaders)
             Subscription(
                 id = s.id,
                 baseUrl = s.baseUrl,
-                optionalHeaders = s.optionalHeaders,
+                optionalHeaders = decryptedHeaders,
                 topic = s.topic,
                 instant = s.instant,
                 dedicatedChannels = s.dedicatedChannels,
@@ -449,10 +474,11 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
         if (s == null) {
             return null
         }
+        val decryptedHeaders = DecryptionHelper.decrypt(s.optionalHeaders)
         return Subscription(
             id = s.id,
             baseUrl = s.baseUrl,
-            optionalHeaders = s.optionalHeaders,
+            optionalHeaders = decryptedHeaders,
             topic = s.topic,
             instant = s.instant,
             dedicatedChannels = s.dedicatedChannels,

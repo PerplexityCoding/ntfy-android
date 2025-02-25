@@ -347,14 +347,14 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             // Optional Headers
             val defaultOptionalHeadersPrefId = context?.getString(R.string.settings_general_default_optional_headers_key) ?: return
             val defaultOptionalHeaders: EditTextPreference? = findPreference(defaultOptionalHeadersPrefId)
-            defaultOptionalHeaders?.text = repository.getDefaultOptionalHeaders() ?: ""
+            defaultOptionalHeaders?.text = if (repository.getDefaultOptionalHeaders().isNullOrBlank()) "" else "<encrypted>"
             defaultOptionalHeaders?.preferenceDataStore = object : PreferenceDataStore() {
                 override fun putString(key: String, value: String?) {
                     val optionalHeaders = value ?: return
                     repository.setDefaultOptionalHeaders(optionalHeaders)
                 }
                 override fun getString(key: String, defValue: String?): String? {
-                    return repository.getDefaultOptionalHeaders()
+                    return if (repository.getDefaultOptionalHeaders().isNullOrBlank()) "" else "<encrypted>"
                 }
             }
             defaultOptionalHeaders?.summaryProvider = Preference.SummaryProvider<EditTextPreference> { pref ->
